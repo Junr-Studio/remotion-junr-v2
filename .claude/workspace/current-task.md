@@ -1,117 +1,108 @@
-# Task: Bouncing Dot Enhancement for JUNR. Logo Animation
+# Task: Implement Remotion Studio Authentication System
 
 ## Status: COMPLETED
 
 ## Outcome
-Enhanced the existing logo animation by extracting the period/dot from "JUNR." and animating it separately with physics-based bouncing:
-- The dot is NOT revealed by the gradient strip
-- The dot falls from above and bounces like a ball
-- It settles at its correct final position (to the right of the "R")
-- The bounce feels organic with squash/stretch deformation
+A fully functional Express authentication proxy that:
+- Wraps Remotion Studio with Supabase authentication
+- Handles token validation, storage in HTTP-only cookies, and automatic refresh
+- Supports dev bypass mode for local development
+- Redirects to WeWeb ERP when session expires
 
 ## Task Breakdown - COMPLETED
 
-### Phase 1: Animation Design (Animator) - COMPLETED
-- [x] Designed bouncing dot physics with piecewise interpolation
-- [x] Specified timing (starts at frame 65, ~20 frame fall, 3 bounces)
-- [x] Defined squash/stretch deformation parameters
-- [x] Documented energy decay (45% retention per bounce)
+### Phase 1: Implementation (Implementer) - COMPLETED
+- [x] Install required dependencies (express, cookie-parser, http-proxy-middleware, @supabase/supabase-js)
+- [x] Install dev dependencies (@types/express, @types/cookie-parser, concurrently, tsx)
+- [x] Create src/server/auth-proxy.ts with the authentication middleware
+- [x] Update package.json scripts (dev port change, dev:auth, start)
+- [x] Update .env.example with NODE_ENV variable
 
-### Phase 2: Implementation (Implementer) - COMPLETED
-- [x] Removed dot path from LOGO_PATHS (now only reveals "JUNR")
-- [x] Created new BouncingDot component with:
-  - Physics-based bounce using piecewise interpolation
-  - Squash on impact (scaleY: 0.6), stretch during motion (scaleY: 1.25)
-  - Starts falling at 72% through reveal phase
-  - Uses same gradient fill as main logo
-- [x] Updated LogoReveal to include BouncingDot
-- [x] Added BouncingDotProps type and BOUNCING_DOT_DEFAULTS to types.ts
-- [x] Exported BouncingDot from components/index.ts
+### Phase 2: Code Review (Reviewer) - COMPLETED
+- [x] Review implementation for spec compliance - APPROVED
+- [x] Verify TypeScript conventions are followed
+- [x] Check error handling completeness
 
-### Phase 3: Verification (Reviewer) - COMPLETED
-- [x] All skill compliance checks passed
-- [x] Uses useCurrentFrame() (no CSS animations)
-- [x] All interpolate() calls properly clamped
-- [x] Extensive memoization throughout
-- [x] TypeScript conventions followed (type not interface)
-- [x] APPROVED - no issues found
+### Phase 3: Security Audit (Security) - COMPLETED
+- [x] Audit cookie security settings - PASS
+- [x] Review token handling for vulnerabilities - PASS
+- [x] Check for common auth bypasses - PASS
+- [x] Validate redirect safety - FIXED (added path validation)
 
 ## Quality Gates - ALL PASSED
 
 | Check | Status | Agent |
 |-------|--------|-------|
-| Animation design complete | PASS | animator |
-| Uses useCurrentFrame() | PASS | reviewer |
-| No CSS animations | PASS | reviewer |
-| All interpolations clamped | PASS | reviewer |
-| Proper memoization | PASS | reviewer |
-| Type (not interface) | PASS | reviewer |
-| JSON-serializable props | PASS | reviewer |
+| Matches STUDIO-AUTH.md spec | PASS | reviewer |
 | TypeScript compiles | PASS | implementer |
-| Reviewer approved | PASS | reviewer |
+| Cookie security (httpOnly, secure, sameSite) | PASS | security |
+| No auth bypasses (except BYPASS_AUTH) | PASS | security |
+| Proper error handling | PASS | reviewer |
+| Open redirect prevented | PASS | security (fixed) |
 
-## Files Modified
+## Files Created/Modified
 
-### 1. `src/animations/internal/logo-animation/components/BouncingDot.tsx` (NEW)
-New component implementing:
-- `calculateBounceY()` - Physics-based Y position with gravity and bounces
-- `calculateDeformation()` - Squash/stretch based on velocity
-- Positioned absolutely within logo container
-- Uses same gradient fill as main logo
+### 1. `src/server/auth-proxy.ts` (NEW)
+Express authentication proxy with:
+- Supabase token validation
+- HTTP-only cookie session management
+- Automatic token refresh (5 min buffer)
+- 24-hour max session duration
+- Development bypass mode
+- WebSocket proxying for Remotion Studio
+- Open redirect protection
 
-### 2. `src/animations/internal/logo-animation/components/LogoReveal.tsx` (MODIFIED)
-- Removed dot path from LOGO_PATHS array (now only 4 paths for "JUNR")
-- Added import for BouncingDot component
-- Added BouncingDot as Layer 3 with startFrame at 72% of revealDuration
+### 2. `package.json` (MODIFIED)
+Added scripts:
+- `dev`: Now runs on port 3001
+- `dev:auth`: Runs both auth proxy and Remotion Studio
+- `start`: Production script for both services
 
-### 3. `src/animations/internal/logo-animation/types.ts` (MODIFIED)
-Added:
-- `BouncingDotProps` type definition
-- `BOUNCING_DOT_DEFAULTS` constant
+Added dependencies:
+- express, cookie-parser, http-proxy-middleware, @supabase/supabase-js
+- @types/express, @types/cookie-parser, concurrently, tsx
 
-### 4. `src/animations/internal/logo-animation/components/index.ts` (MODIFIED)
-Added export for BouncingDot component
-
-## Animation Specification
-
-### Physics Parameters
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Drop height | 200 viewBox units | Height above final position |
-| Fall duration | 20 frames | Time to reach ground |
-| Bounce count | 3 | Number of bounces |
-| Energy retention | 45% | Energy kept per bounce |
-| Max squash | 0.6 (scaleY) | Maximum squash on impact |
-| Max stretch | 1.25 (scaleY) | Maximum stretch during motion |
-
-### Timing (at 60fps, default 90-frame reveal)
-| Event | Frame | Description |
-|-------|-------|-------------|
-| Dot appears | 65 | Starts falling (72% through reveal) |
-| First impact | 85 | Ground contact, maximum squash |
-| Bounce 1 peak | ~93 | First bounce apex |
-| Bounce 2 impact | ~100 | Second impact |
-| Bounce 3 impact | ~110 | Third impact |
-| Settled | ~120 | At rest position |
+### 3. `.env.example` (MODIFIED)
+Added NODE_ENV documentation
 
 ## Agent Findings
-- `.claude/workspace/agent-findings/animator-bouncing-dot.md` - Animation design spec
-- `.claude/workspace/agent-findings/reviewer-bouncing-dot.md` - Review approval
+- `.claude/workspace/agent-findings/reviewer-auth-proxy.md` - Code review approval
+- `.claude/workspace/agent-findings/security-auth-proxy.md` - Security audit results
 
-## How to Preview
+## How to Use
 
+### Development (with auth bypass):
 ```bash
-pnpm dev
-# Select "internal-logo-animation" in Remotion Studio
+# Set in .env.local
+BYPASS_AUTH=true
+
+# Run with auth proxy (bypassed)
+pnpm dev:auth
+# Access at http://localhost:3000
 ```
 
-Watch for:
-- Gradient strip reveals "JUNR" (without the dot)
-- At ~72% through reveal, dot falls from above
-- Dot bounces 3 times with decreasing height
-- Squash on each impact, stretch during fall/rise
-- Dot settles perfectly aligned with logo
+### Development (with auth):
+```bash
+# Ensure .env has valid Supabase credentials
+pnpm dev:auth
+# Access at http://localhost:3000?token=xxx&refresh_token=yyy&expires_at=zzz
+```
 
-## Summary
+### Production:
+```bash
+# Set environment variables
+NODE_ENV=production
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_PUBLISHABLE_KEY=eyJhbG...
+ERP_URL=https://axio.junr.studio
+BYPASS_AUTH=false
 
-Successfully enhanced the JUNR. logo animation with a physics-based bouncing dot. The dot now falls from above and bounces into place with realistic squash/stretch deformation, adding visual interest and a satisfying "punctuation" moment to complete the logo reveal. All Remotion quality standards were followed, and the implementation was approved by the reviewer agent.
+# Start
+pnpm start
+```
+
+## WeWeb Integration
+Button action URL:
+```
+https://studio.junr.studio?token={{supabase.auth.session.access_token}}&refresh_token={{supabase.auth.session.refresh_token}}&expires_at={{supabase.auth.session.expires_at}}
+```
