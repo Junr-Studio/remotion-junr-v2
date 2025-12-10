@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+out/
+build/
+bundle/
+
+# Remotion outputs
+.remotion/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Rendered videos (typically large files)
+*.mp4
+*.webm
+*.mov
+!public/assets/**/*.mp4
+
+# Temporary files
+tmp/
+temp/
+*.tmp
