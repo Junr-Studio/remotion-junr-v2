@@ -168,6 +168,8 @@ app.get('/downloads', (_req, res) => {
   <ul id="files" class="files"></ul>
 
   <script>
+    console.log('Downloads page script loaded!');
+    alert('Script loaded - check console for logs');
     let knownFiles = new Set();
     let autoDownload = true;
     const statusEl = document.getElementById('status');
