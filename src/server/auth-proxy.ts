@@ -201,12 +201,28 @@ app.get('/downloads', (_req, res) => {
 
     async function checkRenders() {
       try {
-        const res = await fetch('/api/renders');
+        const res = await fetch('/api/renders', { credentials: 'include' });
 
         // Check if we got redirected (auth issue)
-        if (res.redirected || !res.ok) {
-          statusEl.textContent = 'Error: ' + (res.redirected ? 'Auth redirect - refresh page' : res.status);
+        if (res.redirected) {
+          statusEl.textContent = 'Auth error - redirected. Try refreshing page.';
           statusEl.className = 'status downloading';
+          console.error('Redirected to:', res.url);
+          return;
+        }
+
+        if (!res.ok) {
+          statusEl.textContent = 'API error: ' + res.status + ' ' + res.statusText;
+          statusEl.className = 'status downloading';
+          console.error('API error:', res.status, await res.text());
+          return;
+        }
+
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          statusEl.textContent = 'Invalid response - not JSON';
+          statusEl.className = 'status downloading';
+          console.error('Not JSON, got:', contentType, await res.text());
           return;
         }
 
