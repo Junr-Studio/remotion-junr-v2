@@ -202,10 +202,23 @@ app.get('/downloads', (_req, res) => {
     async function checkRenders() {
       try {
         const res = await fetch('/api/renders');
+
+        // Check if we got redirected (auth issue)
+        if (res.redirected || !res.ok) {
+          statusEl.textContent = 'Error: ' + (res.redirected ? 'Auth redirect - refresh page' : res.status);
+          statusEl.className = 'status downloading';
+          return;
+        }
+
         const data = await res.json();
 
         // Check for new files
         const newFiles = data.files.filter(f => !knownFiles.has(f.name));
+
+        // Debug info
+        console.log('Renders API response:', data);
+        console.log('Known files:', [...knownFiles]);
+        console.log('New files:', newFiles);
 
         // Update UI
         if (data.files.length === 0) {
