@@ -39,9 +39,14 @@ pnpm-debug.log*
 *.mp4
 *.webm
 *.mov
+*.gif
 !public/assets/**/*.mp4
+!public/assets/**/*.gif
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+
+# AI workspace artifacts
+.claude/workspace/
