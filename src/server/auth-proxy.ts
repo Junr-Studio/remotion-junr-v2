@@ -168,8 +168,6 @@ app.get('/downloads', (_req, res) => {
   <ul id="files" class="files"></ul>
 
   <script>
-    console.log('Downloads page script loaded!');
-    alert('Script loaded - check console for logs');
     let knownFiles = new Set();
     let autoDownload = true;
     const statusEl = document.getElementById('status');
@@ -297,14 +295,99 @@ app.use('/out', express.static(outDir, {
   }
 }));
 
-// Proxy to Remotion Studio with retry on connection errors
+// Auto-download script to inject into Remotion Studio
+const autoDownloadScript = `
+<script>
+(function() {
+  // Auto-download watcher for Remotion Studio
+  let knownFiles = new Set();
+  let initialized = false;
+
+  function triggerDownload(url, name) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    console.log('[Auto-Download] Downloading:', name);
+  }
+
+  async function checkForNewRenders() {
+    try {
+      const res = await fetch('/api/renders', { credentials: 'include' });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const currentFiles = new Set(data.files.map(f => f.name));
+
+      // On first run, just record existing files (don't download)
+      if (!initialized) {
+        knownFiles = currentFiles;
+        initialized = true;
+        console.log('[Auto-Download] Initialized with', knownFiles.size, 'existing files');
+        return;
+      }
+
+      // Find new files
+      for (const file of data.files) {
+        if (!knownFiles.has(file.name)) {
+          console.log('[Auto-Download] New render detected:', file.name);
+          triggerDownload(file.url, file.name);
+        }
+      }
+
+      knownFiles = currentFiles;
+    } catch (err) {
+      // Silent fail - don't spam console
+    }
+  }
+
+  // Start polling
+  setInterval(checkForNewRenders, 2000);
+  checkForNewRenders();
+  console.log('[Auto-Download] Watcher active - new renders will download automatically');
+})();
+</script>
+`;
+
+// Proxy to Remotion Studio with script injection for auto-download
 app.use(
   '/',
   createProxyMiddleware({
     target: REMOTION_TARGET,
     ws: true,
     changeOrigin: true,
+    selfHandleResponse: true,
     on: {
+      proxyRes: (proxyRes, req, res) => {
+        const contentType = proxyRes.headers['content-type'] || '';
+
+        // Only modify HTML responses (the main page)
+        if (contentType.includes('text/html')) {
+          let body = '';
+          proxyRes.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          proxyRes.on('end', () => {
+            // Inject our auto-download script before </body>
+            const modifiedBody = body.replace('</body>', autoDownloadScript + '</body>');
+
+            // Copy headers but update content-length
+            const headers = { ...proxyRes.headers };
+            headers['content-length'] = Buffer.byteLength(modifiedBody).toString();
+            delete headers['content-encoding']; // Remove compression since we modified content
+
+            res.writeHead(proxyRes.statusCode || 200, headers);
+            res.end(modifiedBody);
+          });
+        } else {
+          // For non-HTML, just pipe through
+          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+          proxyRes.pipe(res);
+        }
+      },
       error: (err, _req, res) => {
         console.error('Proxy error:', err.message);
         if ('writeHead' in res && typeof res.writeHead === 'function') {
