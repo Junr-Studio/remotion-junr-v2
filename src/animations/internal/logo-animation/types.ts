@@ -103,9 +103,9 @@ export type BouncingDotProps = {
  */
 export const BOUNCING_DOT_DEFAULTS = {
   bounceCount: 3,
-  energyRetention: 0.45,
-  maxSquash: 0.6,
-  maxStretch: 1.25,
+  energyRetention: 0.55, // Softer decay = more organic feeling bounces
+  maxSquash: 0.7, // Less extreme squash for subtler effect
+  maxStretch: 1.2, // Less extreme stretch
   dropHeight: 200,
   startXOffset: -80, // Start 80 units to the left
 } as const;

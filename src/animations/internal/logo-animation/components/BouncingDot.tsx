@@ -45,7 +45,7 @@ const DOT_BOUNDS = {
 
 /**
  * Calculate Y position for bouncing ball physics
- * Uses sine curve for each bounce to ensure perfectly smooth velocity at apex
+ * Uses true parabolic motion for realistic gravity-based bouncing
  */
 const calculateBounceY = (
   localFrame: number,
@@ -66,8 +66,10 @@ const calculateBounceY = (
   }
 
   // Calculate bounce durations (proportional to sqrt of height for realistic timing)
+  // Physics: t = sqrt(2h/g), so duration scales with sqrt(height)
+  const durationMultiplier = 1.4; // Consistent multiplier for both X and Y
   const bounceDurations = bounceHeights.map((h) =>
-    Math.round(Math.sqrt(h / dropHeight) * fallDuration * 1.3)
+    Math.round(Math.sqrt(h / dropHeight) * fallDuration * durationMultiplier)
   );
 
   // Build keyframe timeline
@@ -84,22 +86,21 @@ const calculateBounceY = (
   }
   currentFrame = fallDuration;
 
-  // Phase 2+: Bounces - use sine curve for perfectly smooth apex
+  // Phase 2+: Bounces - use true parabolic arc (sine wave = natural projectile motion)
   for (let i = 0; i < bounceCount; i++) {
     const bounceHeight = bounceHeights[i] ?? 0;
     const bounceDuration = bounceDurations[i] ?? 0;
+
+    if (bounceDuration === 0) continue;
 
     if (localFrame < currentFrame + bounceDuration) {
       // Progress through this bounce (0 to 1)
       const bounceProgress = (localFrame - currentFrame) / bounceDuration;
 
-      // Use smoothstep-based curve for gentler acceleration at apex
-      // This creates a flatter top compared to sine, with slower acceleration after the peak
-      // Transform progress to create symmetric arc with gentle apex
-      const centered = bounceProgress * 2 - 1; // -1 to 1
-      // Smoothstep derivative creates flatter peak: 1 - x^2 with smooth falloff
-      // Using (1 - x^4) gives even flatter top than (1 - x^2)
-      const arcValue = 1 - Math.pow(centered, 4);
+      // True parabolic motion: sin(π * t) creates natural projectile arc
+      // This gives smooth acceleration into apex and smooth deceleration out
+      // Much more organic than polynomial curves
+      const arcValue = Math.sin(bounceProgress * Math.PI);
 
       // Y position: ground (finalY) minus height based on arc
       return finalY - bounceHeight * arcValue;
@@ -124,6 +125,7 @@ const calculateBounceX = (
   startXOffset: number
 ): number => {
   const fallDuration = 20;
+  const durationMultiplier = 1.4; // Same as Y calculation for sync
 
   // Calculate bounce parameters
   const bounceHeights: number[] = [];
@@ -134,22 +136,22 @@ const calculateBounceX = (
   }
 
   const bounceDurations = bounceHeights.map((h) =>
-    Math.round(Math.sqrt(h / dropHeight) * fallDuration * 1.5)
+    Math.round(Math.sqrt(h / dropHeight) * fallDuration * durationMultiplier)
   );
 
   // Calculate settle frame (when bouncing stops)
   const settleFrame = fallDuration + bounceDurations.reduce((a, b) => a + b, 0);
 
   // X position moves from startXOffset to 0 over the entire animation
-  // Most movement happens during fall, then gradual adjustment during bounces
+  // Use smooth ease-out for natural deceleration as ball loses energy
   const xOffset = interpolate(
     localFrame,
     [0, fallDuration, settleFrame],
-    [startXOffset, startXOffset * 0.25, 0],
+    [startXOffset, startXOffset * 0.3, 0],
     {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
-      easing: Easing.out(Easing.cubic),
+      easing: Easing.out(Easing.quad), // Quad matches gravity physics better
     }
   );
 
@@ -157,8 +159,8 @@ const calculateBounceX = (
 };
 
 /**
- * Calculate squash/stretch deformation using velocity and ground proximity
- * Ultra-smooth approach: continuous blending with no hard transitions
+ * Calculate squash/stretch deformation based on velocity
+ * Simplified physics-based approach: stretch when moving fast, squash at impact
  */
 const calculateDeformation = (
   localFrame: number,
@@ -168,86 +170,47 @@ const calculateDeformation = (
   maxSquash: number,
   maxStretch: number
 ): { scaleX: number; scaleY: number } => {
-  // Sample wide range of frames for ultra-smooth velocity (reduces all jitter)
-  const sampleRadius = 3;
-  let totalVelocity = 0;
-  let weightedSamples = 0;
-
-  for (let offset = -sampleRadius; offset <= sampleRadius; offset++) {
-    if (offset === 0) continue;
-    const frameA = Math.max(0, localFrame + offset - 1);
-    const frameB = localFrame + offset;
-    const yA = calculateBounceY(frameA, dropHeight, 0, bounceCount, energyRetention);
-    const yB = calculateBounceY(frameB, dropHeight, 0, bounceCount, energyRetention);
-    // Weight samples closer to current frame more heavily
-    const weight = 1 / (Math.abs(offset) + 0.5);
-    totalVelocity += (yB - yA) * weight;
-    weightedSamples += weight;
-  }
-
-  const smoothVelocity = weightedSamples > 0 ? totalVelocity / weightedSamples : 0;
+  // Calculate velocity using central difference for smoothness
+  const prevY = calculateBounceY(localFrame - 1, dropHeight, 0, bounceCount, energyRetention);
+  const nextY = calculateBounceY(localFrame + 1, dropHeight, 0, bounceCount, energyRetention);
+  const velocity = (nextY - prevY) / 2; // Positive = moving down
 
   // Get current position for ground detection
   const currentY = calculateBounceY(localFrame, dropHeight, 0, bounceCount, energyRetention);
 
-  // Normalize velocity
+  // Normalize velocity (max velocity occurs at ground impact from initial drop)
   const fallDuration = 20;
   const maxVelocity = dropHeight / fallDuration;
-  const normalizedVelocity = Math.min(1, Math.abs(smoothVelocity) / maxVelocity);
+  const normalizedSpeed = Math.min(1, Math.abs(velocity) / maxVelocity);
 
-  // Smooth velocity curve - even softer response
-  const velocityCurve = Math.pow(normalizedVelocity, 0.6);
+  // Smooth the speed response for subtler deformation
+  const speedFactor = Math.pow(normalizedSpeed, 0.8);
 
-  // Distance from ground with wide blending zone
+  // Ground proximity (0 = at ground, 1 = far from ground)
+  // Use smooth transition zone for gradual squash onset
+  const groundThreshold = dropHeight * 0.15;
   const distanceFromGround = Math.abs(currentY);
+  const groundProximity = Math.min(1, distanceFromGround / groundThreshold);
+  // Smoothstep for organic transition
+  const smoothGroundProximity = groundProximity * groundProximity * (3 - 2 * groundProximity);
 
-  // Use smooth cosine-based ground proximity (no sharp edges)
-  // Blending zone is 25% of drop height for very gradual transition
-  const blendZone = dropHeight * 0.25;
-  const rawProximity = Math.min(1, distanceFromGround / blendZone);
-  // Smooth step function (hermite interpolation) for ultra-smooth transition
-  const groundProximity = rawProximity * rawProximity * (3 - 2 * rawProximity);
+  // Squash when near ground AND moving down (velocity > 0)
+  const isMovingDown = velocity > 0;
+  const squashFactor = isMovingDown ? (1 - smoothGroundProximity) * speedFactor : 0;
 
-  // Direction factor: +1 moving down, -1 moving up, with smooth transition through 0
-  const directionFactor = Math.tanh(smoothVelocity / (maxVelocity * 0.3));
-  const downwardBias = (directionFactor + 1) / 2;
+  // Stretch when moving fast and in the air
+  const stretchFactor = smoothGroundProximity * speedFactor;
 
-  const atGroundFactor = 1 - groundProximity;
+  // Calculate final scales with volume preservation (scaleX * scaleY ≈ 1)
+  const scaleY = interpolate(
+    squashFactor - stretchFactor * 0.5,
+    [-0.5, 0, 1],
+    [maxStretch, 1, maxSquash],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
 
-  // Squash intensity at ground
-  const squashIntensity = velocityCurve * atGroundFactor * downwardBias;
-  const groundSquashY = interpolate(squashIntensity, [0, 1], [1, maxSquash], {
-    extrapolateRight: 'clamp',
-  });
-  const groundSquashX = 1 / groundSquashY;
-
-  // Stretch when moving fast (in flight)
-  const stretchIntensity = velocityCurve * groundProximity;
-  const flightStretchY = interpolate(stretchIntensity, [0, 1], [1, maxStretch], {
-    extrapolateRight: 'clamp',
-  });
-  const flightStretchX = 1 / flightStretchY;
-
-  // Weights for blending
-  const groundWeight = atGroundFactor * downwardBias * velocityCurve;
-  const flightWeight = groundProximity * velocityCurve;
-  const restWeight = Math.pow(1 - velocityCurve, 2);
-
-  const totalWeight = groundWeight + flightWeight + restWeight + 0.001;
-
-  const scaleY = (
-    groundWeight * groundSquashY +
-    flightWeight * flightStretchY +
-    restWeight * 1 +
-    0.001 * 1
-  ) / totalWeight;
-
-  const scaleX = (
-    groundWeight * groundSquashX +
-    flightWeight * flightStretchX +
-    restWeight * 1 +
-    0.001 * 1
-  ) / totalWeight;
+  // Preserve volume: if scaleY shrinks, scaleX expands
+  const scaleX = 1 / scaleY;
 
   return { scaleX, scaleY };
 };
