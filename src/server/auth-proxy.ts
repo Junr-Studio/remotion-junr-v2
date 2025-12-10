@@ -284,16 +284,59 @@ app.get('/downloads', (_req, res) => {
 </html>`);
 });
 
-// Serve static files from out/ directory
-app.use('/out', express.static(outDir, {
-  setHeaders: (res, filePath) => {
-    // Set content-disposition for video files to trigger download
-    const ext = path.extname(filePath).toLowerCase();
-    if (['.mp4', '.webm', '.mov', '.gif'].includes(ext)) {
-      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
-    }
+// Serve files from out/ directory with optional auto-cleanup after download
+app.get('/out/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const autoCleanup = req.query.cleanup === 'true';
+
+  // Validate filename
+  if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).send('Invalid filename');
   }
-}));
+
+  const ext = path.extname(filename).toLowerCase();
+  if (!['.mp4', '.webm', '.mov', '.gif'].includes(ext)) {
+    return res.status(400).send('Invalid file type');
+  }
+
+  const filePath = path.join(outDir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('File not found');
+  }
+
+  const stats = fs.statSync(filePath);
+
+  // Set headers for download
+  res.setHeader('Content-Type', ext === '.gif' ? 'image/gif' : `video/${ext.slice(1)}`);
+  res.setHeader('Content-Length', stats.size);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  // Stream the file
+  const stream = fs.createReadStream(filePath);
+
+  stream.pipe(res);
+
+  // Delete file after download completes (if cleanup requested)
+  if (autoCleanup) {
+    res.on('finish', () => {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error('[Cleanup] Failed to delete after download:', filename, err.message);
+        } else {
+          console.log('[Cleanup] Deleted after successful download:', filename);
+        }
+      });
+    });
+  }
+
+  stream.on('error', (err) => {
+    console.error('[Download] Stream error:', filename, err.message);
+    if (!res.headersSent) {
+      res.status(500).send('Download failed');
+    }
+  });
+});
 
 // Auto-download script to inject into Remotion Studio
 const autoDownloadScript = `
@@ -305,14 +348,16 @@ const autoDownloadScript = `
   let initialized = false;
 
   function triggerDownload(url, name) {
+    // Add cleanup=true to auto-delete after download completes on server
+    const downloadUrl = url + '?cleanup=true';
     const a = document.createElement('a');
-    a.href = url;
+    a.href = downloadUrl;
     a.download = name;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    console.log('[Auto-Download] Downloading:', name);
+    console.log('[Auto-Download] Downloading (with auto-cleanup):', name);
   }
 
   async function checkForNewRenders() {
