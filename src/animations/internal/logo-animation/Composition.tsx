@@ -1,38 +1,40 @@
 /**
- * Junr Logo Animation - Main Composition
+ * Internal Logo Animation - Gradient Wipe Reveal
  *
- * A professional, modern logo reveal animation for Junr brand.
+ * A professional logo reveal animation where a gradient "paints" the logo
+ * from left to right, progressively filling and revealing the JUNR. logotype.
+ *
  * Animation sequence (180 frames at 60fps = 3 seconds):
- * - Phase 1: Entrance (0-60 frames) - Spring scale + opacity fade
- * - Phase 2: Hold (60-150 frames) - Brand exposure
- * - Phase 3: Exit (150-180 frames) - Fade out with scale
+ * - Phase 1: Reveal (0-90 frames) - Gradient wipes from left to right
+ * - Phase 2: Hold (90-150 frames) - Logo fully visible for brand exposure
+ * - Phase 3: Exit (150-180 frames) - Subtle fade out with scale reduction
  *
  * Quality Standards Applied:
- * - Uses useCurrentFrame() for all animations (no CSS animations)
+ * - Uses useCurrentFrame() for all animations (NO CSS animations)
  * - Uses type (not interface) for props
  * - Memoizes expensive calculations
  * - All props are JSON-serializable
- * - Uses <Img> for images via Logo component
- * - Uses staticFile() for assets via Logo component
+ * - Uses staticFile() for assets
  */
 
 import React, { useMemo } from 'react';
 import { AbsoluteFill } from 'remotion';
-import type { JunrLogoAnimationProps } from './types';
-import { JUNR_DEFAULTS } from './types';
-import { Logo } from './components/Logo';
+import type { GradientWipeLogoProps } from './types';
+import { GRADIENT_WIPE_DEFAULTS } from './types';
+import { LogoReveal } from './components';
 
 /**
- * Main Junr Logo Animation Composition
+ * Main Gradient Wipe Logo Animation Composition
  *
  * @param props - Animation configuration props
  * @returns The complete logo animation composition
  */
-const JunrLogoAnimation: React.FC<JunrLogoAnimationProps> = ({
-  backgroundColor = JUNR_DEFAULTS.backgroundColor,
-  logoScale = JUNR_DEFAULTS.logoScale,
-  animationType = JUNR_DEFAULTS.animationType,
-  springConfig,
+const GradientWipeLogoAnimation: React.FC<GradientWipeLogoProps> = ({
+  backgroundColor = GRADIENT_WIPE_DEFAULTS.backgroundColor,
+  logoScale = GRADIENT_WIPE_DEFAULTS.logoScale,
+  revealDuration = GRADIENT_WIPE_DEFAULTS.revealDuration,
+  holdDuration = GRADIENT_WIPE_DEFAULTS.holdDuration,
+  exitDuration = GRADIENT_WIPE_DEFAULTS.exitDuration,
 }) => {
   // Memoize the container style to avoid creating new objects each frame
   const containerStyle = useMemo(
@@ -45,22 +47,17 @@ const JunrLogoAnimation: React.FC<JunrLogoAnimationProps> = ({
     [backgroundColor]
   );
 
-  // Memoize spring config to pass down
-  const resolvedSpringConfig = useMemo(
-    () => springConfig ?? JUNR_DEFAULTS.springConfig,
-    [springConfig]
-  );
-
   return (
     <AbsoluteFill style={containerStyle}>
-      <Logo
+      <LogoReveal
         scale={logoScale}
-        animationType={animationType}
-        springConfig={resolvedSpringConfig}
+        revealDuration={revealDuration}
+        holdDuration={holdDuration}
+        exitDuration={exitDuration}
       />
     </AbsoluteFill>
   );
 };
 
 // Default export required for lazy loading in Root.tsx
-export default JunrLogoAnimation;
+export default GradientWipeLogoAnimation;

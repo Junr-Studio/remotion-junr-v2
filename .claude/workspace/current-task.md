@@ -1,118 +1,117 @@
-# Task: Complete Remotion Animation System Setup + Junr Logo Animation
+# Task: Bouncing Dot Enhancement for JUNR. Logo Animation
 
 ## Status: COMPLETED
 
 ## Outcome
-A fully scaffolded Remotion project with:
-1. Complete directory structure as per Claude.md
-2. Junr client animation project structure
-3. Professional logo animation for Junr (designed by animator, built by implementer)
-4. Quality-verified implementation (reviewed by reviewer)
+Enhanced the existing logo animation by extracting the period/dot from "JUNR." and animating it separately with physics-based bouncing:
+- The dot is NOT revealed by the gradient strip
+- The dot falls from above and bounces like a ball
+- It settles at its correct final position (to the right of the "R")
+- The bounce feels organic with squash/stretch deformation
 
-## Task Breakdown
+## Task Breakdown - COMPLETED
 
-### Phase 1: Project Scaffolding (PO) - COMPLETED
-- [x] Create src/animations/ directory
-- [x] Create src/components/ directory
-- [x] Create src/utils/ directory
-- [x] Create src/types/ directory
-- [x] Create public/assets/logos/clients/ directory
-- [x] Create public/assets/logos/internal/ directory
-- [x] Create public/assets/fonts/ directory
-- [x] Create public/assets/images/ directory
-- [x] Initialize Remotion project (package.json, tsconfig, etc.)
-- [x] Create Root.tsx structure
+### Phase 1: Animation Design (Animator) - COMPLETED
+- [x] Designed bouncing dot physics with piecewise interpolation
+- [x] Specified timing (starts at frame 65, ~20 frame fall, 3 bounces)
+- [x] Defined squash/stretch deformation parameters
+- [x] Documented energy decay (45% retention per bounce)
 
-### Phase 2: Junr Client Setup (PO) - COMPLETED
-- [x] Create src/animations/internal/junr/logo-animation/ directory
-- [x] Create components/ subdirectory
-- [x] Create types.ts file
-- [x] Create Composition.tsx skeleton
-- [x] Create public/assets/logos/internal/junr/ directory
+### Phase 2: Implementation (Implementer) - COMPLETED
+- [x] Removed dot path from LOGO_PATHS (now only reveals "JUNR")
+- [x] Created new BouncingDot component with:
+  - Physics-based bounce using piecewise interpolation
+  - Squash on impact (scaleY: 0.6), stretch during motion (scaleY: 1.25)
+  - Starts falling at 72% through reveal phase
+  - Uses same gradient fill as main logo
+- [x] Updated LogoReveal to include BouncingDot
+- [x] Added BouncingDotProps type and BOUNCING_DOT_DEFAULTS to types.ts
+- [x] Exported BouncingDot from components/index.ts
 
-### Phase 3: Animation Design (Animator Agent) - COMPLETED
-- [x] Plan Junr logo animation sequence
-- [x] Define timing and patterns (180 frames at 60fps = 3 seconds)
-- [x] Specify animation phases (entrance: 0-60, hold: 60-150, exit: 150-180)
-- [x] Document spring configurations (damping: 10, stiffness: 100)
-- [x] Create animation specification
-
-### Phase 4: Implementation (Implementer Agent) - COMPLETED
-- [x] Build logo animation based on animator's design
-- [x] Follow all Remotion quality standards
-- [x] Use useCurrentFrame (no CSS animations)
-- [x] Use type not interface
-- [x] Implement memoization where needed
-- [x] Register composition in Root.tsx
-
-### Phase 5: Quality Verification (Reviewer Agent) - COMPLETED
-- [x] Verify code follows all skills
-- [x] Check for CSS animation anti-patterns - PASS
-- [x] Verify memoization is present - PASS
-- [x] Confirm TypeScript standards (type not interface) - PASS
-- [x] Approve implementation - APPROVED
+### Phase 3: Verification (Reviewer) - COMPLETED
+- [x] All skill compliance checks passed
+- [x] Uses useCurrentFrame() (no CSS animations)
+- [x] All interpolate() calls properly clamped
+- [x] Extensive memoization throughout
+- [x] TypeScript conventions followed (type not interface)
+- [x] APPROVED - no issues found
 
 ## Quality Gates - ALL PASSED
-- [x] Code follows all skills
-- [x] Animations use useCurrentFrame (no CSS)
-- [x] Memoization where needed
-- [x] Reviewer approved
 
-## Deliverables
+| Check | Status | Agent |
+|-------|--------|-------|
+| Animation design complete | PASS | animator |
+| Uses useCurrentFrame() | PASS | reviewer |
+| No CSS animations | PASS | reviewer |
+| All interpolations clamped | PASS | reviewer |
+| Proper memoization | PASS | reviewer |
+| Type (not interface) | PASS | reviewer |
+| JSON-serializable props | PASS | reviewer |
+| TypeScript compiles | PASS | implementer |
+| Reviewer approved | PASS | reviewer |
 
-### Files Created
+## Files Modified
 
-**Project Configuration:**
-- `package.json` - Project dependencies and scripts
-- `tsconfig.json` - TypeScript configuration with path aliases
-- `remotion.config.ts` - Remotion configuration
-- `.eslintrc.cjs` - ESLint rules including Remotion-specific
-- `.prettierrc` - Code formatting rules
-- `tailwind.config.js` - Tailwind CSS configuration
-- `vitest.config.ts` - Test configuration
-- `.gitignore` - Git ignore rules
+### 1. `src/animations/internal/logo-animation/components/BouncingDot.tsx` (NEW)
+New component implementing:
+- `calculateBounceY()` - Physics-based Y position with gravity and bounces
+- `calculateDeformation()` - Squash/stretch based on velocity
+- Positioned absolutely within logo container
+- Uses same gradient fill as main logo
 
-**Source Code:**
-- `src/index.ts` - Entry point
-- `src/Root.tsx` - Composition registration
-- `src/types/common.ts` - Global type definitions
+### 2. `src/animations/internal/logo-animation/components/LogoReveal.tsx` (MODIFIED)
+- Removed dot path from LOGO_PATHS array (now only 4 paths for "JUNR")
+- Added import for BouncingDot component
+- Added BouncingDot as Layer 3 with startFrame at 72% of revealDuration
 
-**Junr Animation:**
-- `src/animations/internal/junr/logo-animation/Composition.tsx` - Main composition
-- `src/animations/internal/junr/logo-animation/components/Logo.tsx` - Logo component
-- `src/animations/internal/junr/logo-animation/components/index.ts` - Exports
-- `src/animations/internal/junr/logo-animation/types.ts` - Type definitions
+### 3. `src/animations/internal/logo-animation/types.ts` (MODIFIED)
+Added:
+- `BouncingDotProps` type definition
+- `BOUNCING_DOT_DEFAULTS` constant
 
-**Assets:**
-- `public/assets/logos/internal/junr/logo.svg` - Junr logo
+### 4. `src/animations/internal/logo-animation/components/index.ts` (MODIFIED)
+Added export for BouncingDot component
 
-### Agent Findings
-- `junr-logo-animation-design.md` - Animator's design specification
-- `implementer-junr-logo-animation.md` - Implementation details
-- `reviewer-junr-logo-animation.md` - Review approval
+## Animation Specification
 
-## Next Steps
+### Physics Parameters
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Drop height | 200 viewBox units | Height above final position |
+| Fall duration | 20 frames | Time to reach ground |
+| Bounce count | 3 | Number of bounces |
+| Energy retention | 45% | Energy kept per bounce |
+| Max squash | 0.6 (scaleY) | Maximum squash on impact |
+| Max stretch | 1.25 (scaleY) | Maximum stretch during motion |
 
-1. **Install dependencies:**
-   ```bash
-   pnpm install
-   ```
+### Timing (at 60fps, default 90-frame reveal)
+| Event | Frame | Description |
+|-------|-------|-------------|
+| Dot appears | 65 | Starts falling (72% through reveal) |
+| First impact | 85 | Ground contact, maximum squash |
+| Bounce 1 peak | ~93 | First bounce apex |
+| Bounce 2 impact | ~100 | Second impact |
+| Bounce 3 impact | ~110 | Third impact |
+| Settled | ~120 | At rest position |
 
-2. **Preview animation:**
-   ```bash
-   pnpm dev
-   # Select "junr-logo-animation" in Remotion Studio
-   ```
+## Agent Findings
+- `.claude/workspace/agent-findings/animator-bouncing-dot.md` - Animation design spec
+- `.claude/workspace/agent-findings/reviewer-bouncing-dot.md` - Review approval
 
-3. **Render final video:**
-   ```bash
-   pnpm render junr-logo-animation
-   ```
+## How to Preview
+
+```bash
+pnpm dev
+# Select "internal-logo-animation" in Remotion Studio
+```
+
+Watch for:
+- Gradient strip reveals "JUNR" (without the dot)
+- At ~72% through reveal, dot falls from above
+- Dot bounces 3 times with decreasing height
+- Squash on each impact, stretch during fall/rise
+- Dot settles perfectly aligned with logo
 
 ## Summary
 
-The Remotion Animation System is now fully set up with:
-- Complete project structure following Claude.md specifications
-- AI development team (animator, implementer, reviewer) workflow validated
-- Professional logo animation for Junr client implemented and approved
-- All quality standards met (no CSS animations, proper memoization, TypeScript best practices)
+Successfully enhanced the JUNR. logo animation with a physics-based bouncing dot. The dot now falls from above and bounces into place with realistic squash/stretch deformation, adding visual interest and a satisfying "punctuation" moment to complete the logo reveal. All Remotion quality standards were followed, and the implementation was approved by the reviewer agent.

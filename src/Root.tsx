@@ -1,8 +1,8 @@
 import React, { lazy } from 'react';
 import { Composition, Folder } from 'remotion';
 
-// Lazy load the Junr logo animation composition
-const JunrLogoAnimation = lazy(
+// Lazy load the internal logo animation composition
+const GradientWipeLogoAnimation = lazy(
   () => import('./animations/internal/logo-animation/Composition')
 );
 
@@ -12,33 +12,23 @@ const JunrLogoAnimation = lazy(
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* Client Animations */}
-      <Folder name="Clients">
-        {/* Client animations will be added here */}
-      </Folder>
-
       {/* Internal Animations */}
       <Folder name="Internal">
-        <Folder name="Junr">
-          <Composition
-            id="junr-logo-animation"
-            component={JunrLogoAnimation}
-            durationInFrames={180}
-            fps={60}
-            width={1920}
-            height={1080}
-            defaultProps={{
-              backgroundColor: '#000000',
-              logoScale: 1,
-              animationType: 'bounce' as const,
-            }}
-          />
-        </Folder>
-      </Folder>
-
-      {/* Templates */}
-      <Folder name="Templates">
-        {/* Reusable animation templates will be added here */}
+        <Composition
+          id="logo-animation-junr-default"
+          component={GradientWipeLogoAnimation}
+          durationInFrames={180}
+          fps={60}
+          width={1080}
+          height={1080}
+          defaultProps={{
+            backgroundColor: '#F9F5F3',
+            logoScale: 1,
+            revealDuration: 90,
+            holdDuration: 60,
+            exitDuration: 30,
+          }}
+        />
       </Folder>
     </>
   );

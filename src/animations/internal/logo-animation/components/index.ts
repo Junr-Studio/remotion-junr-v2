@@ -1,5 +1,6 @@
 /**
- * Export all components for Junr Logo Animation
+ * Component exports for Internal Logo Animation
  */
 
-export { Logo } from './Logo';
+export { LogoReveal } from './LogoReveal';
+export { BouncingDot } from './BouncingDot';
