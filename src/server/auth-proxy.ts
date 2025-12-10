@@ -300,7 +300,8 @@ const autoDownloadScript = `
 <script>
 (function() {
   // Auto-download watcher for Remotion Studio
-  let knownFiles = new Set();
+  const knownFiles = new Map(); // name -> {size, stable}
+  const pendingDownloads = new Map(); // name -> {size, checks}
   let initialized = false;
 
   function triggerDownload(url, name) {
@@ -320,34 +321,65 @@ const autoDownloadScript = `
       if (!res.ok) return;
 
       const data = await res.json();
-      const currentFiles = new Set(data.files.map(f => f.name));
 
       // On first run, just record existing files (don't download)
       if (!initialized) {
-        knownFiles = currentFiles;
+        for (const file of data.files) {
+          knownFiles.set(file.name, { size: file.size, stable: true });
+        }
         initialized = true;
         console.log('[Auto-Download] Initialized with', knownFiles.size, 'existing files');
         return;
       }
 
-      // Find new files
+      // Check each file
       for (const file of data.files) {
-        if (!knownFiles.has(file.name)) {
-          console.log('[Auto-Download] New render detected:', file.name);
-          triggerDownload(file.url, file.name);
+        const known = knownFiles.get(file.name);
+
+        if (!known) {
+          // New file detected - add to pending and wait for size to stabilize
+          const pending = pendingDownloads.get(file.name);
+
+          if (!pending) {
+            // First time seeing this file
+            pendingDownloads.set(file.name, { size: file.size, checks: 1, url: file.url });
+            console.log('[Auto-Download] New file detected, waiting for completion:', file.name, '(' + file.size + ' bytes)');
+          } else if (pending.size === file.size) {
+            // Size unchanged - increment stability counter
+            pending.checks++;
+            console.log('[Auto-Download] File size stable check', pending.checks, '/ 3:', file.name);
+
+            // After 3 checks with same size (6 seconds), consider complete
+            if (pending.checks >= 3) {
+              console.log('[Auto-Download] File complete, downloading:', file.name);
+              triggerDownload(pending.url, file.name);
+              knownFiles.set(file.name, { size: file.size, stable: true });
+              pendingDownloads.delete(file.name);
+            }
+          } else {
+            // Size changed - reset counter (file still being written)
+            pending.size = file.size;
+            pending.checks = 1;
+            console.log('[Auto-Download] File still writing:', file.name, '(' + file.size + ' bytes)');
+          }
         }
       }
 
-      knownFiles = currentFiles;
+      // Update known files with current sizes
+      for (const file of data.files) {
+        if (knownFiles.has(file.name)) {
+          knownFiles.set(file.name, { size: file.size, stable: true });
+        }
+      }
     } catch (err) {
       // Silent fail - don't spam console
     }
   }
 
-  // Start polling
+  // Start polling every 2 seconds
   setInterval(checkForNewRenders, 2000);
   checkForNewRenders();
-  console.log('[Auto-Download] Watcher active - new renders will download automatically');
+  console.log('[Auto-Download] Watcher active - new renders will download automatically after completion');
 })();
 </script>
 `;
