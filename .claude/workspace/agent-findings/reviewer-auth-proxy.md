@@ -20,6 +20,7 @@ APPROVED - Implementation matches STUDIO-AUTH.md specification exactly.
 | Secure in production | PASS | auth-proxy.ts:21 |
 | SameSite=strict | PASS | auth-proxy.ts:22 |
 | 24-hour max session | PASS | auth-proxy.ts:17 |
+| 5-min refresh buffer | PASS | auth-proxy.ts:16 |
 | Refresh token flow | PASS | auth-proxy.ts:61-81 |
 | Clear cookies on error | PASS | auth-proxy.ts:68-70 |
 | WebSocket support | PASS | auth-proxy.ts:89 |

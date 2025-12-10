@@ -1,18 +1,27 @@
+import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const app = express();
 app.use(cookieParser());
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_PUBLISHABLE_KEY!
-);
-
 const ERP_URL = process.env.ERP_URL || 'https://axio.junr.studio';
 const BYPASS_AUTH = process.env.BYPASS_AUTH === 'true';
+
+// Only create Supabase client if not bypassing auth and credentials exist
+let supabase: SupabaseClient | null = null;
+if (!BYPASS_AUTH) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY) {
+    console.error('ERROR: SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required when BYPASS_AUTH is not true');
+    process.exit(1);
+  }
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY
+  );
+}
 const REFRESH_BUFFER = 5 * 60 * 1000; // Refresh 5 min before expiry
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -63,7 +72,7 @@ app.use(async (req, res, next) => {
   }
 
   // === REFRESH NEEDED ===
-  const { data, error } = await supabase.auth.setSession({
+  const { data, error } = await supabase!.auth.setSession({
     access_token: token,
     refresh_token: refreshToken,
   });
