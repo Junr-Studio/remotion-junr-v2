@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import fs from 'fs';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 
@@ -96,6 +98,46 @@ app.use(async (req, res, next) => {
 
 const REMOTION_PORT = process.env.REMOTION_PORT || 3001;
 const REMOTION_TARGET = `http://localhost:${REMOTION_PORT}`;
+
+// Serve rendered videos from the out/ directory
+// This allows downloads to work in production where the filesystem is ephemeral
+const outDir = path.join(process.cwd(), 'out');
+
+// API endpoint to list rendered files
+app.get('/api/renders', (_req, res) => {
+  try {
+    if (!fs.existsSync(outDir)) {
+      return res.json({ files: [] });
+    }
+    const files = fs.readdirSync(outDir)
+      .filter(f => ['.mp4', '.webm', '.mov', '.gif'].includes(path.extname(f).toLowerCase()))
+      .map(f => {
+        const stats = fs.statSync(path.join(outDir, f));
+        return {
+          name: f,
+          url: `/out/${f}`,
+          size: stats.size,
+          created: stats.birthtime,
+        };
+      })
+      .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    return res.json({ files });
+  } catch (err) {
+    console.error('Error listing renders:', err);
+    return res.status(500).json({ error: 'Failed to list renders' });
+  }
+});
+
+// Serve static files from out/ directory
+app.use('/out', express.static(outDir, {
+  setHeaders: (res, filePath) => {
+    // Set content-disposition for video files to trigger download
+    const ext = path.extname(filePath).toLowerCase();
+    if (['.mp4', '.webm', '.mov', '.gif'].includes(ext)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
+    }
+  }
+}));
 
 // Proxy to Remotion Studio with retry on connection errors
 app.use(
