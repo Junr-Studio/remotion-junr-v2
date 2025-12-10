@@ -28,7 +28,7 @@ const SESSION_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const secureCookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  sameSite: 'lax' as const, // 'lax' allows cookies on cross-site top-level navigations (clicking links)
 };
 
 app.use(async (req, res, next) => {
