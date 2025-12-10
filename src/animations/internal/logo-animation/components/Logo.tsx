@@ -133,7 +133,7 @@ export const Logo: React.FC<LogoProps> = ({
   return (
     <div style={style}>
       <Img
-        src={staticFile('assets/logos/internal/junr/logo.svg')}
+        src={staticFile('assets/internal/logos/logo.svg')}
         style={imgStyle}
       />
     </div>

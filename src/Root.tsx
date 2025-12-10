@@ -3,7 +3,7 @@ import { Composition, Folder } from 'remotion';
 
 // Lazy load the Junr logo animation composition
 const JunrLogoAnimation = lazy(
-  () => import('./animations/internal/junr/logo-animation/Composition')
+  () => import('./animations/internal/logo-animation/Composition')
 );
 
 /**
