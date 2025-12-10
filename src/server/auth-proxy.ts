@@ -94,18 +94,30 @@ app.use(async (req, res, next) => {
   return next();
 });
 
-// Proxy to Remotion Studio
+const REMOTION_PORT = process.env.REMOTION_PORT || 3001;
+const REMOTION_TARGET = `http://localhost:${REMOTION_PORT}`;
+
+// Proxy to Remotion Studio with retry on connection errors
 app.use(
   '/',
   createProxyMiddleware({
-    target: 'http://localhost:3001', // Remotion runs on 3001
+    target: REMOTION_TARGET,
     ws: true,
     changeOrigin: true,
+    on: {
+      error: (err, _req, res) => {
+        console.error('Proxy error:', err.message);
+        if ('writeHead' in res && typeof res.writeHead === 'function') {
+          res.writeHead(503, { 'Content-Type': 'text/plain' });
+          res.end('Remotion Studio is starting up, please refresh in a few seconds...');
+        }
+      },
+    },
   })
 );
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Auth proxy on port ${PORT}, proxying to Remotion on 3001`);
+  console.log(`Auth proxy on port ${PORT}, proxying to Remotion on ${REMOTION_PORT}`);
   console.log(`BYPASS_AUTH: ${BYPASS_AUTH}`);
 });
